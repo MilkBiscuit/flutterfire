@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #import "FLTFirebaseDynamicLinksPlugin.h"
-#import "UserAgent.h"
 
 #import "Firebase/Firebase.h"
 
@@ -119,63 +118,88 @@ static NSMutableDictionary *getDictionaryFromFlutterError(FlutterError *error) {
   return getDictionaryFromDynamicLink(_initialLink);
 }
 
+- (void)onDeepLinkResult:(FIRDynamicLink *_Nullable)dynamicLink error:(NSError *_Nullable)error {
+  if (_initiated) {
+    if (error) {
+      FlutterError *flutterError = getFlutterError(error);
+      [_channel invokeMethod:@"onLinkError" arguments:getDictionaryFromFlutterError(flutterError)];
+    } else {
+      NSMutableDictionary *dictionary = getDictionaryFromDynamicLink(dynamicLink);
+      [_channel invokeMethod:@"onLinkSuccess" arguments:dictionary];
+    }
+  } else {
+    if (error) {
+      _flutterError = getFlutterError(error);
+    } else if (dynamicLink.url != nil || _initialLink == nil) {
+      // We'd like to overwrite initial link only if it's
+      // the first time or if we overwrite it with url that is not nil
+      _initialLink = dynamicLink;
+    }
+  }
+}
+
+- (void)checkForDynamicLink:(NSURL *)url {
+  FIRDynamicLink *dynamicLink = [[FIRDynamicLinks dynamicLinks] dynamicLinkFromCustomSchemeURL:url];
+  if (dynamicLink) {
+    [self onDeepLinkResult:dynamicLink error:nil];
+  }
+}
+
 - (BOOL)application:(UIApplication *)application
             openURL:(NSURL *)url
             options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
-  return [self checkForDynamicLink:url];
+  [self checkForDynamicLink:url];
+  // Results of this are ORed and NO doesn't affect other delegate interceptors' result.
+  return NO;
 }
 
 - (BOOL)application:(UIApplication *)application
               openURL:(NSURL *)url
     sourceApplication:(NSString *)sourceApplication
            annotation:(id)annotation {
-  return [self checkForDynamicLink:url];
-}
-
-- (BOOL)checkForDynamicLink:(NSURL *)url {
-  FIRDynamicLink *dynamicLink = [[FIRDynamicLinks dynamicLinks] dynamicLinkFromCustomSchemeURL:url];
-  if (dynamicLink) {
-    if (dynamicLink.url) _initialLink = dynamicLink;
-    return YES;
-  }
+  [self checkForDynamicLink:url];
+  // Results of this are ORed and NO doesn't affect other delegate interceptors' result.
   return NO;
-}
-
-- (BOOL)onLink:(NSUserActivity *)userActivity {
-  BOOL handled = [[FIRDynamicLinks dynamicLinks]
-      handleUniversalLink:userActivity.webpageURL
-               completion:^(FIRDynamicLink *_Nullable dynamicLink, NSError *_Nullable error) {
-                 if (error) {
-                   FlutterError *flutterError = getFlutterError(error);
-                   [self.channel invokeMethod:@"onLinkError"
-                                    arguments:getDictionaryFromFlutterError(flutterError)];
-                 } else {
-                   NSMutableDictionary *dictionary = getDictionaryFromDynamicLink(dynamicLink);
-                   [self.channel invokeMethod:@"onLinkSuccess" arguments:dictionary];
-                 }
-               }];
-  return handled;
-}
-
-- (BOOL)onInitialLink:(NSUserActivity *)userActivity {
-  BOOL handled = [[FIRDynamicLinks dynamicLinks]
-      handleUniversalLink:userActivity.webpageURL
-               completion:^(FIRDynamicLink *_Nullable dynamicLink, NSError *_Nullable error) {
-                 if (error) {
-                   self.flutterError = getFlutterError(error);
-                 }
-                 self.initialLink = dynamicLink;
-               }];
-  return handled;
 }
 
 - (BOOL)application:(UIApplication *)application
     continueUserActivity:(NSUserActivity *)userActivity
-      restorationHandler:(void (^)(NSArray *))restorationHandler {
-  if (_initiated) {
-    return [self onLink:userActivity];
-  }
-  return [self onInitialLink:userActivity];
+      restorationHandler:(nonnull void (^)(NSArray *_Nullable))restorationHandler {
+  __block BOOL retried = NO;
+  void (^completionBlock)(FIRDynamicLink *_Nullable dynamicLink, NSError *_Nullable error);
+  void (^__block __weak weakCompletionBlock)(FIRDynamicLink *_Nullable dynamicLink,
+                                             NSError *_Nullable error);
+  weakCompletionBlock = completionBlock = ^(FIRDynamicLink *_Nullable dynamicLink,
+                                            NSError *_Nullable error) {
+    if (!error && dynamicLink && dynamicLink.url) {
+      [self onDeepLinkResult:dynamicLink error:nil];
+    }
+
+    // Per Apple Tech Support, a network failure could occur when returning from background on
+    // iOS 12. https://github.com/AFNetworking/AFNetworking/issues/4279#issuecomment-447108981 So
+    // we'll retry the request once
+    if (error && !retried && [NSPOSIXErrorDomain isEqualToString:error.domain] &&
+        error.code == 53) {
+      retried = YES;
+      [[FIRDynamicLinks dynamicLinks] handleUniversalLink:userActivity.webpageURL
+                                               completion:weakCompletionBlock];
+    }
+    // We could send this to Dart and maybe have a onDynamicLinkError stream but there's also
+    // a good chance the `userActivity.webpageURL` might not be for a Firebase dynamic link,
+    // which needs consideration - so we'll log this for now, logging will get picked up by
+    // Crashlytics automatically if its integrated.
+    if (error)
+      NSLog(
+          @"FLTFirebaseDynamicLinks: Unknown error occurred when attempting to handle a universal "
+          @"link: %@",
+          error);
+  };
+
+  [[FIRDynamicLinks dynamicLinks] handleUniversalLink:userActivity.webpageURL
+                                           completion:completionBlock];
+
+  // Results of this are ORed and NO doesn't affect other delegate interceptors' result.
+  return NO;
 }
 
 - (FIRDynamicLinkShortenerCompletion)createShortLinkCompletion:(FlutterResult)result {

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #import "FLTFirebaseAnalyticsPlugin.h"
-#import "UserAgent.h"
 
 #import "Firebase/Firebase.h"
 
@@ -25,13 +24,6 @@
 
 - (instancetype)init {
   self = [super init];
-  if (self) {
-    if (![FIRApp appNamed:@"__FIRAPP_DEFAULT"]) {
-      NSLog(@"Configuring the default Firebase app...");
-      [FIRApp configure];
-      NSLog(@"Configured the default Firebase app %@.", [FIRApp defaultApp].name);
-    }
-  }
   return self;
 }
 
@@ -54,7 +46,11 @@
   } else if ([@"setCurrentScreen" isEqualToString:call.method]) {
     NSString *screenName = call.arguments[@"screenName"];
     NSString *screenClassOverride = call.arguments[@"screenClassOverride"];
-    [FIRAnalytics setScreenName:screenName screenClass:screenClassOverride];
+    [FIRAnalytics logEventWithName:@"screen_view"
+                        parameters:@{
+                          @"screen_name" : screenName,
+                          @"screen_class" : screenClassOverride,
+                        }];
     result(nil);
   } else if ([@"setUserProperty" isEqualToString:call.method]) {
     NSString *name = call.arguments[@"name"];
