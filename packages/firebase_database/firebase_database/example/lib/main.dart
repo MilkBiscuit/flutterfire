@@ -11,7 +11,16 @@ import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final FirebaseApp app = await Firebase.initializeApp();
+  final FirebaseApp app = await Firebase.initializeApp(
+    name: 'db2',
+    options: const FirebaseOptions(
+      appId: '1:311461039753:android:75e4e6b171b603d9c50058',
+      apiKey: 'AIzaSyB32CD_sQyYUBRFQKfZN2THbb-UgFwYhNs',
+      databaseURL: 'https://fir-demo-5bf7a.firebaseio.com',
+      projectId: 'fir-demo-5bf7a',
+      messagingSenderId: '311461039753'
+    )
+  );
   runApp(MaterialApp(
     title: 'Flutter Database Example',
     home: MyHomePage(app: app),
@@ -43,9 +52,10 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     // Demonstrates configuring to the database using a file
-    _counterRef = FirebaseDatabase.instance.reference().child('counter');
+    // _counterRef = FirebaseDatabase.instance.reference().child('counter');
     // Demonstrates configuring the database directly
     final FirebaseDatabase database = FirebaseDatabase(app: widget.app);
+    _counterRef = database.reference().child('counter');
     _messagesRef = database.reference().child('messages');
     database.reference().child('counter').once().then((DataSnapshot snapshot) {
       print('Connected to second database and read ${snapshot.value}');
