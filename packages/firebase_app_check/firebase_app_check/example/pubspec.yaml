@@ -1,18 +1,17 @@
 name: firebase_app_check_example
 description: Firebase App Check example application.
 
-publish_to: "none"
+publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.16.0 <3.0.0"
+  sdk: '>=2.18.0 <4.0.0'
 
 dependencies:
-  cloud_firestore: any
-  cupertino_icons: ^0.1.2
-  firebase_app_check: any
-  firebase_core: any
+  cloud_firestore: ^4.17.4
+  firebase_app_check: ^0.2.2+6
+  firebase_core: ^2.31.1
   flutter:
     sdk: flutter
 
