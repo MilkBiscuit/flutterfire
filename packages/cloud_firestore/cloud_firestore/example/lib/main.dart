@@ -88,10 +88,9 @@ extension on Query<Movie> {
 class FirestoreExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: 'Firestore Example App',
-      theme: ThemeData.dark(),
-      home: const Scaffold(
+      home: Scaffold(
         body: Center(child: FilmList()),
       ),
     );

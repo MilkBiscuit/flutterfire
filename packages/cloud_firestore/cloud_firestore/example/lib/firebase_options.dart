@@ -67,17 +67,17 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDooSUGSf63Ghq02_iIhtnmwMDs4HlWS6c',
-    appId: '1:406099696497:ios:0670bc5fe8574a9c3574d0',
-    messagingSenderId: '406099696497',
-    projectId: 'flutterfire-e2e-tests',
+    apiKey: 'AIzaSyAub-sNq7aX6bqaS9Ar7w3YS9C3Bo96e0I',
+    appId: '1:311461039753:ios:dedf6ae84a67c9d6c50058',
+    messagingSenderId: '311461039753',
+    projectId: 'fir-demo-5bf7a',
     databaseURL:
-        'https://flutterfire-e2e-tests-default-rtdb.europe-west1.firebasedatabase.app',
-    storageBucket: 'flutterfire-e2e-tests.appspot.com',
+        'https://fir-demo-5bf7a.firebaseio.com',
+    storageBucket: 'fir-demo-5bf7a.appspot.com',
     androidClientId:
-        '406099696497-17qn06u8a0dc717u8ul7s49ampk13lul.apps.googleusercontent.com',
+        '311461039753-d2t1dfddl7df8elffhmsjlvrj1vglvjb.apps.googleusercontent.com',
     iosClientId:
-        '406099696497-l9gojfp6b3h1cgie1se28a9ol9fmsvvk.apps.googleusercontent.com',
+        '311461039753-lt6t6p0romok4rubf02703qsh1f12u6k.apps.googleusercontent.com',
     iosBundleId: 'io.flutter.plugins.firebase.firestore.example',
   );
 
